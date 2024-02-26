@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/symbol/starts_ends_with"
+require "active_support/html_safe_translation"
 
 module AbstractController
   module Translation
@@ -23,8 +24,14 @@ module AbstractController
         key = "#{path}.#{action_name}#{key}"
       end
 
-      i18n_raise = options.fetch(:raise, self.raise_on_missing_translations)
-      I18n.translate(key, **options, raise: i18n_raise)
+      if options[:default]
+        options[:default] = [options[:default]] unless options[:default].is_a?(Array)
+        options[:default] = options[:default].map do |value|
+          value.is_a?(String) ? ERB::Util.html_escape(value) : value
+        end
+      end
+
+      ActiveSupport::HtmlSafeTranslation.translate(key, **options)
     end
     alias :t :translate
 

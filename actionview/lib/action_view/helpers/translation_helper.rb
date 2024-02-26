@@ -2,14 +2,18 @@
 
 require "action_view/helpers/tag_helper"
 require "active_support/core_ext/symbol/starts_ends_with"
+require "active_support/html_safe_translation"
 
 module ActionView
   # = Action View Translation Helpers
-  module Helpers #:nodoc:
+  module Helpers # :nodoc:
     module TranslationHelper
       extend ActiveSupport::Concern
 
       include TagHelper
+
+      # Specify whether an error should be raised for missing translations
+      singleton_class.attr_accessor :raise_on_missing_translations
 
       included do
         mattr_accessor :debug_missing_translation, default: true
@@ -85,14 +89,9 @@ module ActionView
 
           key = scope_key_by_partial(key)
 
-          if html_safe_translation_key?(key)
-            html_safe_options ||= html_escape_translation_options(options)
-            translated = I18n.translate(key, **html_safe_options, default: default)
-            break html_safe_translation(translated) unless translated.equal?(MISSING_TRANSLATION)
-          else
-            translated = I18n.translate(key, **options, default: default)
-            break translated unless translated.equal?(MISSING_TRANSLATION)
-          end
+          translated = ActiveSupport::HtmlSafeTranslation.translate(key, **options, default: default)
+
+          break translated unless translated.equal?(MISSING_TRANSLATION)
 
           if alternatives.present? && !alternatives.first.is_a?(Symbol)
             break alternatives.first && I18n.translate(**options, default: alternatives)
